@@ -1,3 +1,94 @@
+#define NOTE_B0  31
+#define NOTE_C1  33
+#define NOTE_CS1 35
+#define NOTE_D1  37
+#define NOTE_DS1 39
+#define NOTE_E1  41
+#define NOTE_F1  44
+#define NOTE_FS1 46
+#define NOTE_G1  49
+#define NOTE_GS1 52
+#define NOTE_A1  55
+#define NOTE_AS1 58
+#define NOTE_B1  62
+#define NOTE_C2  65
+#define NOTE_CS2 69
+#define NOTE_D2  73
+#define NOTE_DS2 78
+#define NOTE_E2  82
+#define NOTE_F2  87
+#define NOTE_FS2 93
+#define NOTE_G2  98
+#define NOTE_GS2 104
+#define NOTE_A2  110
+#define NOTE_AS2 117
+#define NOTE_B2  123
+#define NOTE_C3  131
+#define NOTE_CS3 139
+#define NOTE_D3  147
+#define NOTE_DS3 156
+#define NOTE_E3  165
+#define NOTE_F3  175
+#define NOTE_FS3 185
+#define NOTE_G3  196
+#define NOTE_GS3 208
+#define NOTE_A3  220
+#define NOTE_AS3 233
+#define NOTE_B3  247
+#define NOTE_C4  262
+#define NOTE_CS4 277
+#define NOTE_D4  294
+#define NOTE_DS4 311
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_FS4 370
+#define NOTE_G4  392
+#define NOTE_GS4 415
+#define NOTE_A4  440
+#define NOTE_AS4 466
+#define NOTE_B4  494
+#define NOTE_C5  523
+#define NOTE_CS5 554
+#define NOTE_D5  587
+#define NOTE_DS5 622
+#define NOTE_E5  659
+#define NOTE_F5  698
+#define NOTE_FS5 740
+#define NOTE_G5  784
+#define NOTE_GS5 831
+#define NOTE_A5  880
+#define NOTE_AS5 932
+#define NOTE_B5  988
+#define NOTE_C6  1047
+#define NOTE_CS6 1109
+#define NOTE_D6  1175
+#define NOTE_DS6 1245
+#define NOTE_E6  1319
+#define NOTE_F6  1397
+#define NOTE_FS6 1480
+#define NOTE_G6  1568
+#define NOTE_GS6 1661
+#define NOTE_A6  1760
+#define NOTE_AS6 1865
+#define NOTE_B6  1976
+#define NOTE_C7  2093
+#define NOTE_CS7 2217
+#define NOTE_D7  2349
+#define NOTE_DS7 2489
+#define NOTE_E7  2637
+#define NOTE_F7  2794
+#define NOTE_FS7 2960
+#define NOTE_G7  3136
+#define NOTE_GS7 3322
+#define NOTE_A7  3520
+#define NOTE_AS7 3729
+#define NOTE_B7  3951
+#define NOTE_C8  4186
+#define NOTE_CS8 4435
+#define NOTE_D8  4699
+#define NOTE_DS8 4978
+#define REST      0
+
 #define LED1 5
 #define LED2 6
 #define LED3 9
@@ -25,1409 +116,259 @@ void loop()
   }
 }
 
-void interpret(String command) 
+void interpret(String command)
 {
   if(command == "s1") 
   {
     step1 = 500;
-    step2 = 1000;    
+    step2 = 800;    
     S1();
   } else if(command == "s2") 
   {
-    //S2();
+    step1 = 200;
+    step2 = 400;
+    S2();
   } else if(command == "help") 
   {
     Serial.println("\nPossible commands :");
-    Serial.println("s1 - Start scene 1");
-    Serial.println("s2 - Start scene 2");
+    Serial.println("s1   - Start scene 1");
+    Serial.println("s2   - Start scene 2");
+    Serial.println("stop - Stop scene");
   }
 }
 
+int shouldStopProgram()
+{
+  String command = "";
+  if (Serial.available()) 
+  {
+    command = Serial.readStringUntil('\n');
+    if(command == "stop")
+    {
+      return 1;
+    }
+  }
 
-void buzz(int Hz,int time) 
+  return 0;
+}
+
+void playMelody(int melody[], int tempo, int notes)
+{
+  int wholenote = (60000 * 4) / tempo;
+  int divider = 0, noteDuration = 0;
+
+  int timeBeforeCombo = 0;
+
+  for (int thisNote = 0; thisNote < notes * 2; thisNote = thisNote + 2) 
+  {
+    // this part comes from us
+    if(shouldStopProgram())
+    {
+      return;
+    }
+
+    if(timeBeforeCombo <= 0)
+    {
+      lightCombo();
+      timeBeforeCombo = 5000;
+    }
+    
+    // this part comes from the internet
+    divider = melody[thisNote + 1];
+    if (divider > 0) {
+      noteDuration = (wholenote) / divider;
+    } else if (divider < 0) {
+      // dotted notes are represented with negative durations
+      noteDuration = (wholenote) / abs(divider);
+      noteDuration *= 1.5;
+    }
+
+    timeBeforeCombo -= noteDuration;
+
+    buzz(melody[thisNote], noteDuration);
+    delay(noteDuration);
+    noTone(BUZZER);
+  }
+}
+
+// calls tone function and turns the 3 leds on according to the frequency
+void buzz(int note, int noteDuration) 
 {
   analogWrite(LED1, 0);
   analogWrite(LED2, 0);
   analogWrite(LED3, 0);
-  tone(BUZZER,Hz,delay);
-  if(Hz > step1)
+  tone(BUZZER, note, noteDuration * 0.9);
+  if(note > step1)
   {
     analogWrite(LED3, 255);
-    if(Hz > step2)
+    if(note > step2)
     {
       analogWrite(LED2, 255);
-      analogWrite(LED1, (Hz-step2)/2);
+      analogWrite(LED1, (note-step2)/2);
     } else
     {
-      analogWrite(LED2, (Hz-step1)/2);
+      analogWrite(LED2, (note-step1)/2);
     }
   } else
   {
-    analogWrite(LED3, Hz/2);
+    analogWrite(LED3, note/2);
   } 
 
 }
 
 void wait(size_t delaySeconds) 
 {
-  Serial.println("z1");  
+  Serial.println("z1");
   for(size_t i = 0; i < delaySeconds; i++) 
   {
     Serial.println("a");
   }
 }
 
-// 10s
-void lightCombo1() 
+void S1()
 {
-  Serial.println("z1");  
-  Serial.println("f0");
-  Serial.println("f2");
+  Serial.println("Starting scene 1");
 
+  /* ===== INTERNET CODE START ===== */
+
+  // notes of the moledy followed by the duration.
+  // a 4 means a quarter note, 8 an eighteenth , 16 sixteenth, so on
+  // so -4 means a dotted quarter note, that is, a quarter plus an eighteenth
+  int melody[] = 
+  {
+    NOTE_FS5,8, NOTE_FS5,8,NOTE_D5,8, NOTE_B4,8, REST,8, NOTE_B4,8, REST,8, NOTE_E5,8, 
+    REST,8, NOTE_E5,8, REST,8, NOTE_E5,8, NOTE_GS5,8, NOTE_GS5,8, NOTE_A5,8, NOTE_B5,8,
+    NOTE_A5,8, NOTE_A5,8, NOTE_A5,8, NOTE_E5,8, REST,8, NOTE_D5,8, REST,8, NOTE_FS5,8, 
+    REST,8, NOTE_FS5,8, REST,8, NOTE_FS5,8, NOTE_E5,8, NOTE_E5,8, NOTE_FS5,8, NOTE_E5,8,
+    NOTE_FS5,8, NOTE_FS5,8,NOTE_D5,8, NOTE_B4,8, REST,8, NOTE_B4,8, REST,8, NOTE_E5,8, 
+    
+    REST,8, NOTE_E5,8, REST,8, NOTE_E5,8, NOTE_GS5,8, NOTE_GS5,8, NOTE_A5,8, NOTE_B5,8,
+    NOTE_A5,8, NOTE_A5,8, NOTE_A5,8, NOTE_E5,8, REST,8, NOTE_D5,8, REST,8, NOTE_FS5,8, 
+    REST,8, NOTE_FS5,8, REST,8, NOTE_FS5,8, NOTE_E5,8, NOTE_E5,8, NOTE_FS5,8, NOTE_E5,8,
+    NOTE_FS5,8, NOTE_FS5,8,NOTE_D5,8, NOTE_B4,8, REST,8, NOTE_B4,8, REST,8, NOTE_E5,8, 
+    REST,8, NOTE_E5,8, REST,8, NOTE_E5,8, NOTE_GS5,8, NOTE_GS5,8, NOTE_A5,8, NOTE_B5,8,
+    
+    NOTE_A5,8, NOTE_A5,8, NOTE_A5,8, NOTE_E5,8, REST,8, NOTE_D5,8, REST,8, NOTE_FS5,8, 
+    REST,8, NOTE_FS5,8, REST,8, NOTE_FS5,8, NOTE_E5,8, NOTE_E5,8, NOTE_FS5,8, NOTE_E5,8,
+  };
+
+  /* ===== INTERNET CODE END ===== */
+
+  int notes = sizeof(melody) / sizeof(melody[0]) / 2;
+
+  playMelody(melody, 140, notes);
+}
+
+void S2()
+{
+  Serial.println("Starting scene 2");
+  int tempo = 150;
+
+  /* ===== INTERNET CODE START ===== */
+
+  int melody[] = 
+  {
+    NOTE_DS4,8, 
+    NOTE_E4,-4, REST,8, NOTE_FS4,8, NOTE_G4,-4, REST,8, NOTE_DS4,8,
+    NOTE_E4,-8, NOTE_FS4,8,  NOTE_G4,-8, NOTE_C5,8, NOTE_B4,-8, NOTE_E4,8, NOTE_G4,-8, NOTE_B4,8,   
+    NOTE_AS4,2, NOTE_A4,-16, NOTE_G4,-16, NOTE_E4,-16, NOTE_D4,-16, 
+    NOTE_E4,2, REST,4, REST,8, NOTE_DS4,4,
+
+    NOTE_E4,-4, REST,8, NOTE_FS4,8, NOTE_G4,-4, REST,8, NOTE_DS4,8,
+    NOTE_E4,-8, NOTE_FS4,8,  NOTE_G4,-8, NOTE_C5,8, NOTE_B4,-8, NOTE_G4,8, NOTE_B4,-8, NOTE_E5,8,
+    NOTE_DS5,1,   
+    NOTE_D5,2, REST,4, REST,8, NOTE_DS4,8, 
+    NOTE_E4,-4, REST,8, NOTE_FS4,8, NOTE_G4,-4, REST,8, NOTE_DS4,8,
+    NOTE_E4,-8, NOTE_FS4,8,  NOTE_G4,-8, NOTE_C5,8, NOTE_B4,-8, NOTE_E4,8, NOTE_G4,-8, NOTE_B4,8,   
+    
+    NOTE_AS4,2, NOTE_A4,-16, NOTE_G4,-16, NOTE_E4,-16, NOTE_D4,-16, 
+    NOTE_E4,-4, REST,4,
+    REST,4, NOTE_E5,-8, NOTE_D5,8, NOTE_B4,-8, NOTE_A4,8, NOTE_G4,-8, NOTE_E4,-8,
+    NOTE_AS4,16, NOTE_A4,-8, NOTE_AS4,16, NOTE_A4,-8, NOTE_AS4,16, NOTE_A4,-8, NOTE_AS4,16, NOTE_A4,-8,   
+    NOTE_G4,-16, NOTE_E4,-16, NOTE_D4,-16, NOTE_E4,16, NOTE_E4,16, NOTE_E4,2,
+  };
+
+  /* ===== INTERNET CODE END ===== */
+
+  int notes = sizeof(melody) / sizeof(melody[0]) / 2;
+
+  playMelody(melody, 140, notes);
+}
+
+/* ===== 5s functions that call good light function combinations ===== */
+void lightCombo()
+{
+  int combo = random() % 5;
+
+  switch(combo)
+  {
+    case 0:
+      lightCombo0();
+      break;
+    case 1:
+      lightCombo1();
+      break;
+    case 2:
+      lightCombo2();
+      break;
+    case 3:
+      lightCombo3();
+      break;
+    case 4:
+      lightCombo4();
+      break;
+    
+  }
+}
+
+void lightCombo0()
+{
+  Serial.println("z2");
+  Serial.println("e4");
+
+  Serial.println("z1");
+  Serial.println("b");
+  
+  Serial.println("z2");
+  Serial.println("e8");
+}
+
+void lightCombo1()
+{
+  Serial.println("z1");
+  Serial.println("a");
+  Serial.println("f0");
+  Serial.println("f1");
+  Serial.println("f2");
+  Serial.println("f3");
+}
+
+void lightCombo2()
+{
   Serial.println("z2");
   Serial.println("c01");
   Serial.println("c11");
 
   Serial.println("z1");
-  Serial.println("d21");
-  Serial.println("d20");
-  Serial.println("f1");
-  Serial.println("f3");
+  Serial.println("c00");
 }
 
-// 20s
-void lightCombo2() 
-{
-  Serial.println("z2");  
-  Serial.println("e4");
-
-  Serial.println("z1");
-  Serial.println("f0");
-  Serial.println("f2");
-
-  Serial.println("z2");
-  Serial.println("c01");
-  Serial.println("b");
-  Serial.println("d21");
-  Serial.println("e2");
-  Serial.println("e1");
-  Serial.println("f1");
-  Serial.println("e8");
-  Serial.println("d11");
-}
-
-// 20s
 void lightCombo3()
 {
-  Serial.println("z3");
-  Serial.println("b");  
-
-  Serial.println("z4");
-  Serial.println("e8");
+  Serial.println("z1");
+  Serial.println("e2");
 
   Serial.println("z2");
   Serial.println("d01");
   Serial.println("d11");
-
-  Serial.println("z1");
-  Serial.println("b");
-  Serial.println("a");
-  Serial.println("b");
-  Serial.println("a");
-  Serial.println("b");
-
-  Serial.println("z1");
-  Serial.println("f0");
-  Serial.println("f1");
-  Serial.println("f2");
-  Serial.println("f3");
 }
 
-
-void S1()
+void lightCombo4()
 {
-  lightCombo3();
-  buzz(294,125);//D4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,250);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(588,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
+  Serial.println("z1");
+  Serial.println("a");
 
-  //DOEH DEH DEH AH DAH DOOEH DOO AH (INTENSIFIES)
-
-  buzz(587,125);//D5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(523,125);//C5
-  delay(125);
-  buzz(523,125);//C5
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(494,125);//B4
-  delay(125);
-  buzz(494,125);//B4
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(466,125);//Bb4
-  delay(125);
-  buzz(466,125);//Bb4
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(523,125);//C5
-  delay(125);
-  buzz(523,125);//C5
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(494,125);//B4
-  delay(125);
-  buzz(494,125);//B4
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(466,125);//Bb4
-  delay(125);
-  buzz(466,125);//Bb4
-  delay(125);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(325);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-
-  //DU DU DUDU DU DU DU
-
-  buzz(698,250);//F5
-  delay(250);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(698,125);//F5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(587,625);//D5
-  delay(625);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(698,125);//F5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(831,250);//Ab5
-  delay(250);
-  buzz(784,42);//G5
-  delay(42);
-  buzz(831,42);//Ab5
-  delay(42);
-  buzz(784,42);//G5
-  delay(42);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(375);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(698,125);//F5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(831,125);//Ab5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(880,375);//A5
-  delay(375);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(1175,125);//D6
-  delay(125);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(1175,125);//D6
-  delay(125);
-  buzz(1046,625);//C6
-  delay(625);
-  buzz(1568,500);//G6
-  delay(500);
-
-  //DU DU DUDU DU DU DUU (INTENSIFIES)
-
-  buzz(880,250);//A5
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(880,125);//A5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(784,625);//G5
-  delay(625);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(880,125);//A5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(784,125);//G5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(1175,125);//D6
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(1175,250);//D6
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(659,250);//E5
-  delay(250);
-  buzz(466,250);//Bb4
-  delay(250);
-  buzz(523,125);//C5
-  delay(125);
-  buzz(587,125);//D5
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(1046,1125);//C6
-  delay(2125);
-
-  //Epic part
-
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(831,63);//Ab5
-  delay(63);
-  buzz(784,63);//G5
-  delay(63);
-  buzz(698,63);//F5
-  delay(63);
-  buzz(587,63);//D5
-  delay(63);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(784,1125);//G5
-  delay(1125);
-  buzz(831,250);//Ab5
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(659,125);//E5
-  delay(125);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(1109,250);//Db6
-  delay(250);
-  buzz(831,250);//Ab5
-  delay(250);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,1125);//G5
-  delay(1125);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(440,250);//A4
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(587,500);//D5
-  delay(500);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(698,500);//F5
-  delay(500);
-  buzz(784,500);//G5
-  delay(500);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(880,1000);//A5
-  delay(1000);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(740,125);//Gb5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(659,125);//E5
-  delay(125);
-  buzz(622,125);//Eb5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(554,1000);//Db5
-  delay(1000);
-  buzz(622,1000);//Eb5
-  delay(2000);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(831,63);//Ab5
-  delay(63);
-  buzz(784,63);//G5
-  delay(63);
-  buzz(698,63);//F5
-  delay(63);
-  buzz(587,63);//D5
-  delay(63);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(784,1125);//G5
-  delay(1125);
-  buzz(831,250);//Ab5
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(659,125);//E5
-  delay(125);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(784,250);//G5
-  delay(250);
-  buzz(880,250);//A5
-  delay(250);
-  buzz(1046,250);//C6
-  delay(250);
-  buzz(1109,250);//Db6
-  delay(250);
-  buzz(831,250);//Ab5
-  delay(250);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(784,1125);//G5
-  delay(1125);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(440,250);//A4
-  delay(250);
-  buzz(698,250);//F5
-  delay(250);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(587,500);//D5
-  delay(500);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(698,500);//F5
-  delay(500);
-  buzz(784,500);//G5
-  delay(500);
-  buzz(659,500);//E5
-  delay(500);
-  buzz(880,1000);//A5
-  delay(1000);
-  buzz(880,125);//A5
-  delay(125);
-  buzz(831,125);//Ab5
-  delay(125);
-  buzz(784,125);//G5
-  delay(125);
-  buzz(740,125);//Gb5
-  delay(125);
-  buzz(698,125);//F5
-  delay(125);
-  buzz(659,125);//E5
-  delay(125);
-  buzz(622,125);//Eb5
-  delay(125);
-  buzz(587,125);//D5
-  delay(125);
-  buzz(554,1000);//Db5
-  delay(1000);
-  buzz(622,1000);//Eb5
-  delay(1000);
-
-  //Opera
-
-  buzz(233,1500);//Bb3
-  delay(1500);
-  buzz(349,500);//F4
-  delay(500);
-  buzz(330,1000);//E4
-  delay(1000);
-  buzz(294,1000);//D4
-  delay(1000);
-  buzz(349,4000);//F4
-  delay(4000);
-  buzz(233,1500);//Bb3
-  delay(1500);
-  buzz(349,500);//F4
-  delay(500);
-  buzz(330,1000);//E4
-  delay(1000);
-  buzz(294,1000);//D4
-  delay(1000);
-  buzz(294,1000);//D4
-  delay(1000);
-  buzz(294,83);//D4
-  delay(83);
-  buzz(277,83);//Db4
-  delay(83);
-  buzz(261,83);//C4(middle)     
-  delay(83);
-  buzz(247,83);//B3
-  delay(83);
-  buzz(233,83);//Bb3
-  delay(83);
-  buzz(220,83);//A3
-  delay(83);
-  buzz(208,83);//Ab3
-  delay(83);
-  buzz(196,83);//G3
-  delay(83);
-  buzz(185,83);//Gb3
-  delay(83);
-  buzz(175,83);//F3
-  delay(83);
-  buzz(165,83);//E3
-  delay(83);
-  buzz(156,83);//Eb3
-  delay(83);
-  buzz(147,2000);//D3
-  delay(2000);
-  buzz(233,1500);//Bb3
-  delay(1500);
-  buzz(349,500);//F4
-  delay(500);
-  buzz(330,1000);//E4
-  delay(1000);
-  buzz(294,1000);//D4
-  delay(1000);
-  buzz(349,2000);//F4
-  delay(2000);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(196,125);//G3
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(220,250);//A3
-  delay(250);
-  buzz(196,125);//G3
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(125);
-  buzz(233,1500);//Bb3
-  delay(1500);
-  buzz(349,500);//F4
-  delay(500);
-  buzz(330,1000);//E4
-  delay(1000);
-  buzz(294,1000);//D4
-  delay(1000);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(330,250);//E4
-  delay(250);
-  buzz(261,125);//C4(middle)     
-  delay(250);
-  buzz(330,250);//E4
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(196,125);//G3
-  delay(125);
-  buzz(220,125);//A3
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(330,250);//E4
-  delay(250);
-  buzz(261,125);//C4(middle)     
-  delay(250);
-  buzz(330,250);//E4
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(196,125);//G3
-  delay(125);
-  buzz(220,125);//A3
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(125);
-
-  //rock part
-
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(139,125);//Db3
-  delay(125);
-  buzz(277,250);//Db4
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(123,125);//B2
-  delay(125);
-  buzz(247,250);//B3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(116,125);//Bb2
-  delay(125);
-  buzz(233,250);//Bb3
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(261,250);//C4(middle)     
-  delay(250);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(130,125);//C3
-  delay(125);
-  buzz(261,250);//C4(middle)
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(220,125);//A3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(175,250);//F3
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(196,125);//G3
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(220,125);//A3
-  delay(125);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(294,250);//D4
-  delay(250);
-  buzz(175,250);//F3
-  delay(250);
-  buzz(147,125);//D3
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(196,125);//G3
-  delay(125);
-
-  //99999999999999999999999999999999999999999999999999999999999999
-
-  buzz(294,125);//D4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,250);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(247,125);//B3
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(233,62);//Bb3
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(125);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(261,125);//C4(middle)     
-  delay(62);
-  buzz(587,250);//D5
-  delay(250);
-  buzz(440,375);//A4
-  delay(375);
-  buzz(415,125);//Ab4
-  delay(250);
-  buzz(392,250);//G4
-  delay(250);
-  buzz(349,250);//F4
-  delay(250);
-  buzz(294,125);//D4
-  delay(125);
-  buzz(349,125);//F4
-  delay(125);
-  buzz(392,125);//G4
-  delay(4125);
+  Serial.println("z2");
+  Serial.println("d21");
+  Serial.println("d31");
 }
