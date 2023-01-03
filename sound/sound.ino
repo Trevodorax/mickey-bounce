@@ -6,7 +6,8 @@
 int step1 = 500;
 int step2 = 1000;
 
-void setup() {
+void setup() 
+{
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
@@ -14,62 +15,138 @@ void setup() {
   Serial.begin(115200);
 }
 
-void loop() {
+void loop() 
+{
   String command = "";
-  if (Serial.available()) {
+  if (Serial.available()) 
+  {
     command = Serial.readStringUntil('\n');
     interpret(command);
   }
-
 }
 
-void interpret(String command){
-  if(command == "s1"){
+void interpret(String command) 
+{
+  if(command == "s1") 
+  {
     step1 = 500;
-    step2 = 1000;
+    step2 = 1000;    
     S1();
-  }else if(command == "s2"){
+  } else if(command == "s2") 
+  {
     //S2();
+  } else if(command == "help") 
+  {
+    Serial.println("\nPossible commands :");
+    Serial.println("s1 - Start scene 1");
+    Serial.println("s2 - Start scene 2");
   }
 }
 
 
-void buzz(int Hz,int time){
+void buzz(int Hz,int time) 
+{
   analogWrite(LED1, 0);
   analogWrite(LED2, 0);
   analogWrite(LED3, 0);
   tone(BUZZER,Hz,delay);
-  if(Hz > step1){
+  if(Hz > step1)
+  {
     analogWrite(LED3, 255);
-    if(Hz > step2){
+    if(Hz > step2)
+    {
       analogWrite(LED2, 255);
       analogWrite(LED1, (Hz-step2)/2);
-    }else{
+    } else
+    {
       analogWrite(LED2, (Hz-step1)/2);
     }
-  }else{
+  } else
+  {
     analogWrite(LED3, Hz/2);
   } 
 
 }
 
-void enchainement1(){
-  Serial.println("z2");
-  Serial.println("e3");
+void wait(size_t delaySeconds) 
+{
+  Serial.println("z1");  
+  for(size_t i = 0; i < delaySeconds; i++) 
+  {
+    Serial.println("a");
+  }
+}
+
+// 10s
+void lightCombo1() 
+{
+  Serial.println("z1");  
   Serial.println("f0");
   Serial.println("f2");
+
+  Serial.println("z2");
+  Serial.println("c01");
+  Serial.println("c11");
+
+  Serial.println("z1");
+  Serial.println("d21");
+  Serial.println("d20");
+  Serial.println("f1");
+  Serial.println("f3");
+}
+
+// 20s
+void lightCombo2() 
+{
+  Serial.println("z2");  
+  Serial.println("e4");
+
+  Serial.println("z1");
+  Serial.println("f0");
+  Serial.println("f2");
+
+  Serial.println("z2");
   Serial.println("c01");
   Serial.println("b");
   Serial.println("d21");
   Serial.println("e2");
   Serial.println("e1");
   Serial.println("f1");
+  Serial.println("e8");
+  Serial.println("d11");
+}
+
+// 20s
+void lightCombo3()
+{
+  Serial.println("z3");
+  Serial.println("b");  
+
+  Serial.println("z4");
+  Serial.println("e8");
+
+  Serial.println("z2");
+  Serial.println("d01");
+  Serial.println("d11");
+
+  Serial.println("z1");
   Serial.println("b");
+  Serial.println("a");
+  Serial.println("b");
+  Serial.println("a");
+  Serial.println("b");
+
+  Serial.println("z1");
+  Serial.println("f0");
+  Serial.println("f1");
+  Serial.println("f2");
+  Serial.println("f3");
 }
 
 
-void S1(){
-  enchainement1();
+void S1()
+{
+  lightCombo3();
   buzz(294,125);//D4
   delay(125);
   buzz(294,125);//D4
